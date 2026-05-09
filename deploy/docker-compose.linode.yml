@@ -37,7 +37,11 @@ services:
       POSTGRES_PWD: ${POSTGRES_PASSWORD}
       POSTGRES_SEEDS: postgresql
 
+  # Optional local blob store. Default Linode deploy uses Akamai Object Storage (see deploy/scripts/configure-linode-object-storage.sh).
+  # Start with: docker compose --profile minio ...
   minio:
+    profiles:
+      - minio
     image: minio/minio:latest
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -74,8 +78,6 @@ services:
       postgresql:
         condition: service_healthy
       temporal:
-        condition: service_started
-      minio:
         condition: service_started
 
 volumes:

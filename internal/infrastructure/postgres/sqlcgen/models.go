@@ -37,3 +37,16 @@ type IngestionRun struct {
 	ErrorMessage    pgtype.Text
 	CreatedAt       pgtype.Timestamptz
 }
+
+type Organization struct {
+	ID          string
+	DisplayName string
+	CreatedAt   pgtype.Timestamptz
+}
+
+type Project struct {
+	OrganizationID string
+	ProjectID      string
+	DisplayName    string
+	CreatedAt      pgtype.Timestamptz
+}

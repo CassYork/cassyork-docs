@@ -107,6 +107,8 @@ docker compose --env-file deploy/.env.linode -f deploy/docker-compose.linode.yml
 docker compose --env-file deploy/.env.linode -f deploy/docker-compose.linode.yml ps
 ```
 
+The Compose file starts **Postgres, Temporal, admin-ui** by default. **MinIO is optional** (`profiles: minio`) — use Object Storage (section 10) in production, or add **`--profile minio`** and point **`OBJECT_STORAGE_*`** at **`http://minio:9000`** for a self-contained VM.
+
 ## 6. Run database migrations (once per fresh volume)
 
 Use Goose **v3** against the `cassyork` database (the Hub image `pressly/goose` is unreliable; use a one-shot Go toolchain container):
@@ -157,13 +159,45 @@ Prefer **systemd** or a second Compose service for production.
 
 Put **Caddy** or **NGINX** on ports 80/443 and reverse-proxy to `admin-ui:8095`, or use Linode **NodeBalancer** + TLS termination.
 
-## 10. Linode Object Storage (optional)
+## 10. Linode Object Storage (recommended)
 
-Replace MinIO by setting in `deploy/.env.linode`:
+Create a **bucket** in Cloud Manager (or with `aws s3 mb` against your cluster endpoint). Note the **region** your bucket uses (for Newark-style clusters this is often API region **`us-east`**, endpoint host **`us-east-1.linodeobjects.com`**).
 
-- `OBJECT_STORAGE_ENDPOINT=https://us-east-1.linodeobjects.com` (region-specific)
-- `OBJECT_STORAGE_ACCESS_KEY_ID` / `OBJECT_STORAGE_SECRET_ACCESS_KEY` from Cloud Manager
-- `OBJECT_STORAGE_BUCKET`
-- `OBJECT_STORAGE_USE_PATH_STYLE=false` (often correct for S3-compatible endpoints)
+### Configure with Linode CLI
 
-Keep bucket CORS and networking aligned with your app URL.
+From the repo root (requires **`linode-cli configure`**):
+
+```bash
+# Inspect clusters / endpoints (optional)
+linode-cli object-storage endpoints --json | jq '.[] | select(.s3_endpoint!=null)'
+
+# Merge HTTPS endpoint + credentials into deploy/.env.linode (creates a new access key):
+export LINODE_OS_BUCKET="your-bucket-name"
+export LINODE_OS_REGION="us-east"   # API region from endpoints listing
+./deploy/scripts/configure-linode-object-storage.sh --apply --create-key
+```
+
+Or supply existing keys instead of `--create-key`:
+
+```bash
+export LINODE_OS_ACCESS_KEY_ID="..."
+export LINODE_OS_SECRET_ACCESS_KEY="..."
+./deploy/scripts/configure-linode-object-storage.sh --apply
+```
+
+The script sets **`OBJECT_STORAGE_USE_PATH_STYLE=false`** and **`OBJECT_STORAGE_ENDPOINT=https://…`** for virtual-hosted style.
+
+Redeploy **without** the MinIO container (default):
+
+```bash
+docker compose --env-file deploy/.env.linode -f deploy/docker-compose.linode.yml up -d --build
+```
+
+Optional local MinIO only for debugging:
+
+```bash
+# In deploy/.env.linode use OBJECT_STORAGE_ENDPOINT=http://minio:9000 and matching keys.
+docker compose --profile minio --env-file deploy/.env.linode -f deploy/docker-compose.linode.yml up -d --build
+```
+
+Align bucket **CORS** with your browser origin if the UI loads artifacts directly from Object Storage.

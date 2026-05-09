@@ -1,4 +1,4 @@
-.PHONY: sqlc templ migrate-up migrate-down migrate-status compose-db dev-admin-ui install-air linode-create linode-bootstrap linode-status linode-ssh linode-push linode-migrate-remote linode-up linode-down linode-logs
+.PHONY: sqlc templ migrate-up migrate-down migrate-status compose-db dev-admin-ui install-air linode-create linode-bootstrap linode-status linode-ssh linode-push linode-migrate-remote linode-os-config linode-up linode-down linode-logs
 
 GOOSE ?= go run github.com/pressly/goose/v3/cmd/goose@v3.24.1
 
@@ -41,6 +41,10 @@ linode-push:
 # Run Goose migrations only on the VM (uses ~/.ssh/id_ed25519 + deploy/linode-connection.env).
 linode-migrate-remote:
 	bash deploy/linode-migrate-remote.sh
+
+# Merge Linode Object Storage settings into deploy/.env.linode via linode-cli (needs LINODE_OS_BUCKET, etc.).
+linode-os-config:
+	bash deploy/scripts/configure-linode-object-storage.sh
 
 # Linode / production Compose (requires deploy/.env.linode — copy deploy/env.linode.example).
 linode-up:

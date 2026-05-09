@@ -33,3 +33,18 @@ CREATE TABLE ingestion_runs (
 CREATE INDEX idx_ingestion_runs_document_id ON ingestion_runs (document_id);
 
 CREATE INDEX idx_ingestion_runs_org_project ON ingestion_runs (organization_id, project_id);
+
+-- Workspace registry (seeded in migrations/00002_workspace_seed.sql).
+CREATE TABLE organizations (
+  id TEXT PRIMARY KEY,
+  display_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+);
+
+CREATE TABLE projects (
+  organization_id TEXT NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
+  project_id TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
+  PRIMARY KEY (organization_id, project_id)
+);
