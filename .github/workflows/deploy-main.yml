@@ -22,26 +22,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure SSH
-        env:
-          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
         run: |
-          if [ -z "${DEPLOY_SSH_PRIVATE_KEY:-}" ] || [ -z "${DEPLOY_HOST:-}" ]; then
-            echo "Missing secrets: DEPLOY_SSH_PRIVATE_KEY and DEPLOY_HOST are required." >&2
+          if [ -z "${DEPLOY_HOST:-}" ]; then
+            echo "Missing secret DEPLOY_HOST" >&2
             exit 1
           fi
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
       - name: Rsync repository (preserves server deploy/.env.linode)
         run: |
           USER="${DEPLOY_USER:-root}"
           DIR="${DEPLOY_REMOTE_DIR:-/opt/cassyork-docs}"
           rsync -az --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
+            -e "ssh -o StrictHostKeyChecking=yes" \
             --exclude '.git' \
             --exclude '.venv' \
             --exclude 'venv' \
@@ -57,7 +58,7 @@ jobs:
         run: |
           USER="${DEPLOY_USER:-root}"
           DIR="${DEPLOY_REMOTE_DIR:-/opt/cassyork-docs}"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new \
+          ssh -o StrictHostKeyChecking=yes \
             "${USER}@${DEPLOY_HOST}" \
             "set -euo pipefail
              cd '${DIR}'
