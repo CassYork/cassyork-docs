@@ -17,7 +17,7 @@ On each push to **`main`** (and manual **Actions → Deploy main → Run workflo
 | Secret | Required | Description |
 |--------|----------|-------------|
 | **`DEPLOY_HOST`** | Yes | Server public IPv4 or DNS (same host you SSH to). |
-| **`DEPLOY_SSH_PRIVATE_KEY`** | Yes | Private key whose **public** half is in **`~/.ssh/authorized_keys`** on the server for the deploy user (often **`root`**). Paste the full PEM, including `BEGIN` / `END` lines. |
+| **`DEPLOY_SSH_PRIVATE_KEY`** | Yes | Private key whose **public** half is in **`~/.ssh/authorized_keys`** on the server for the deploy user (often **`root`**). Paste the full PEM, including `BEGIN` / `END` lines. Use a **dedicated key with no passphrase** for Actions (`ssh-keygen -t ed25519 -f deploy_key -N ""`); passphrase-protected keys cannot be loaded in CI. |
 | **`DEPLOY_USER`** | No | SSH user (default **`root`**). |
 | **`DEPLOY_REMOTE_DIR`** | No | Deploy path on the server (default **`/opt/cassyork-docs`**). |
 
