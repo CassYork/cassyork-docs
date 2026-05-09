@@ -1,0 +1,14 @@
+/bin/
+/dist/
+*.exe
+.env
+.env.*
+__pycache__/
+*.py[cod]
+.python-version
+.venv/
+venv/
+.idea/
+.vscode/
+/tmp/
+*.sqlite3

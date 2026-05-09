@@ -1,0 +1,122 @@
+package adminui
+
+templ DocumentsTable(rows []DocumentSummary) {
+	if len(rows) == 0 {
+		<p class="muted" style="margin:0;font-size:0.875rem">No documents for this org/project yet.</p>
+	} else {
+		<table class="ops">
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Status</th>
+					<th>Type</th>
+					<th>Created</th>
+					<th>Storage</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, r := range rows {
+					<tr>
+						<td><code>{ r.ID }</code></td>
+						<td>{ r.Status }</td>
+						<td>{ r.MimeType }</td>
+						<td>{ r.CreatedAt }</td>
+						<td title={ r.StorageURI }><code>{ r.StorageURI }</code></td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+templ OpsDocumentsTable(scope OrgScope, rows []OpsDocumentRow) {
+	if len(rows) == 0 {
+		<p class="muted" style="margin:0;font-size:0.875rem">No documents for this scope.</p>
+	} else {
+		<table class="ops">
+			<thead>
+				<tr>
+					<th>Document</th>
+					<th>Status</th>
+					<th>Type</th>
+					<th>Project</th>
+					<th>Latest run</th>
+					<th>Model</th>
+					<th>Confidence</th>
+					<th>Validation</th>
+					<th>Review</th>
+					<th>Created</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, r := range rows {
+					<tr>
+						<td>
+							<a class="row-link" href={ DocumentLink(scope, r.DocumentID) }>{ r.DisplayName }</a>
+						</td>
+						<td>{ r.Status }</td>
+						<td>{ r.DocumentType }</td>
+						<td>{ r.ProjectID }</td>
+						<td>
+							if r.LatestRunID != "—" {
+								<a class="row-link" href={ RunLink(scope, r.LatestRunID) }><code>{ r.LatestRunID }</code></a>
+							} else {
+								<span class="muted">—</span>
+							}
+						</td>
+						<td>{ r.Model }</td>
+						<td>{ r.Confidence }</td>
+						<td>{ r.Validation }</td>
+						<td>{ r.ReviewStatus }</td>
+						<td class="muted">{ r.CreatedAt }</td>
+						<td><a class="row-link" href={ DocumentLink(scope, r.DocumentID) }>View</a></td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+templ RunsTable(rows []RunSummary) {
+	if len(rows) == 0 {
+		<p class="muted" style="margin:0;font-size:0.875rem">No runs for this org/project yet.</p>
+	} else {
+		<table class="ops">
+			<thead>
+				<tr>
+					<th>Run</th>
+					<th>Document</th>
+					<th>Status</th>
+					<th>Pipeline</th>
+					<th>Trace</th>
+					<th>Created</th>
+					<th>Error</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, r := range rows {
+					<tr>
+						<td><code>{ r.ID }</code></td>
+						<td><code>{ r.DocumentID }</code></td>
+						<td>{ r.Status }</td>
+						<td>{ r.PipelineID }</td>
+						<td><code>{ r.TraceID }</code></td>
+						<td>{ r.CreatedAt }</td>
+						<td title={ r.ErrorPreview }>{ r.ErrorPreview }</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+templ IngestResultFragment(ok bool, errMsg string, docID string, runID string) {
+	if ok {
+		<div style="color:#15803d;font-size:0.875rem">
+			Queued ingestion · doc <code>{ docID }</code> · run <code>{ runID }</code>. Tables refresh automatically.
+		</div>
+	} else {
+		<div style="color:#b91c1c;font-size:0.875rem">{ errMsg }</div>
+	}
+}

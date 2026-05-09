@@ -1,0 +1,36 @@
+package adminui
+
+templ ReviewQueuePage(vm PlaceholderPageVM) {
+	@Shell(NavReview, vm.Title, vm.Scope, placeholderBody(vm))
+}
+
+templ EvaluationsPage(vm PlaceholderPageVM) {
+	@Shell(NavEvaluations, vm.Title, vm.Scope, placeholderBody(vm))
+}
+
+templ PipelinesPage(vm PlaceholderPageVM) {
+	@Shell(NavPipelines, vm.Title, vm.Scope, placeholderBody(vm))
+}
+
+templ ModelsPage(vm PlaceholderPageVM) {
+	@Shell(NavModels, vm.Title, vm.Scope, placeholderBody(vm))
+}
+
+templ SchemasPage(vm PlaceholderPageVM) {
+	@Shell(NavSchemas, vm.Title, vm.Scope, placeholderBody(vm))
+}
+
+templ placeholderBody(vm PlaceholderPageVM) {
+	<h1 class="page-title">{ vm.Title }</h1>
+	<p class="page-desc">{ vm.Description }</p>
+	if len(vm.Bullets) > 0 {
+		<ul style="margin:0;padding-left:1.25rem;color:var(--text-muted);max-width:42rem;line-height:1.65;font-size:0.9rem">
+			for _, b := range vm.Bullets {
+				<li>{ b }</li>
+			}
+		</ul>
+	}
+	<div class="panel-placeholder" style="margin-top:1.25rem;min-height:220px">
+		Backend APIs + persistence land next · layout locked for shipping velocity.
+	</div>
+}

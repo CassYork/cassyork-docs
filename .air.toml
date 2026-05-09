@@ -1,0 +1,35 @@
+# Live reload for admin-ui: regenerates templ, rebuilds, restarts.
+# Run from repo root: make dev-admin-ui
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  args_bin = []
+  bin = "./tmp/admin-ui"
+  cmd = "go run github.com/a-h/templ/cmd/templ@latest generate ./internal/adminui && go build -o ./tmp/admin-ui ./cmd/admin-ui"
+  delay = 600
+  exclude_dir = ["tmp", "vendor", "python", ".venv", "venv", "node_modules", "migrations"]
+  # templ generates *_templ.go — ignore those or air rebuilds in a loop.
+  exclude_regex = ["_templ\\.go$"]
+  exclude_unchanged = false
+  follow_symlink = false
+  full_bin = ""
+  include_dir = ["cmd/admin-ui", "internal/adminui"]
+  include_ext = ["go", "templ"]
+  kill_delay = "500ms"
+  log = "tmp/air-build.log"
+  poll = false
+  rerun = false
+  send_interrupt = true
+  stop_on_error = true
+
+[color]
+  build = "yellow"
+  main = "magenta"
+  runner = "green"
+
+[misc]
+  clean_on_exit = true
+
+[screen]
+  clear_on_rebuild = false

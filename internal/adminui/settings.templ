@@ -1,0 +1,130 @@
+package adminui
+
+templ SettingsFullPage(vm SettingsVM) {
+	@Shell(NavSettings, "Settings", vm.Scope, settingsBody(vm))
+}
+
+templ settingsBody(vm SettingsVM) {
+	<h1 class="page-title">Settings</h1>
+	<p class="page-desc">
+		Workspace defaults, integration endpoints (redacted), and delivery boundaries. Customer-facing roles stay narrow; internal admins see traces and raw outputs elsewhere.
+	</p>
+	if vm.SavedWorkspace {
+		<div class="flash flash-ok">Saved default organization and project for this browser (HttpOnly cookies). Visiting / uses these when the URL has no tenant segments.</div>
+	}
+	if vm.ClearedWorkspace {
+		<div class="flash flash-warn">Cleared saved workspace defaults. Falls back to demo scope until you apply scope again or save new defaults.</div>
+	}
+	<div class="settings-stack">
+		<section class="card">
+			<h3>Default workspace</h3>
+			<p class="muted" style="margin:0 0 1rem">
+				Persist org/project for bare <code>/</code> entry. After saving, open the bookmarkable path shown in the address bar for explicit tenancy.
+			</p>
+			<form method="post" action={ vm.Scope.Path("ui/actions/workspace-defaults") } class="form-grid">
+				<div>
+					<label for="ws-org">Organization ID</label>
+					<input type="text" id="ws-org" name="organization_id" value={ vm.Scope.OrganizationID } autocomplete="organization-id"/>
+				</div>
+				<div>
+					<label for="ws-proj">Project ID</label>
+					<input type="text" id="ws-proj" name="project_id" value={ vm.Scope.ProjectID } autocomplete="off"/>
+				</div>
+				<div>
+					<button type="submit" class="btn btn-primary" style="width:100%">Save defaults</button>
+				</div>
+			</form>
+			<form method="post" action={ vm.Scope.Path("ui/actions/clear-workspace-defaults") } style="margin-top:0.75rem">
+				<button type="submit" class="btn">Clear saved defaults</button>
+			</form>
+		</section>
+		<section class="card">
+			<h3>This UI process</h3>
+			<dl class="settings-kv">
+				<dt>Listen address</dt>
+				<dd><code>{ vm.Runtime.ListenAddr }</code> · set <code>LISTEN_ADDR</code></dd>
+				<dt>List sample size</dt>
+				<dd>{ vm.Runtime.AdminUIListLimitDesc }</dd>
+				<dt>Health</dt>
+				<dd><a class="row-link" href="/healthz">GET /healthz</a></dd>
+			</dl>
+		</section>
+		<section class="card">
+			<h3>Database</h3>
+			<p class="muted" style="margin:0 0 0.75rem">Transactional store for documents and runs. Password never rendered.</p>
+			<dl class="settings-kv">
+				<dt>Connection</dt>
+				<dd><code>{ vm.Runtime.DatabaseDisplay }</code></dd>
+			</dl>
+		</section>
+		<section class="card">
+			<h3>Temporal</h3>
+			<dl class="settings-kv">
+				<dt>Frontend address</dt>
+				<dd><code>{ vm.Runtime.TemporalAddress }</code></dd>
+				<dt>Namespace</dt>
+				<dd><code>{ vm.Runtime.TemporalNamespace }</code></dd>
+				<dt>Workflow UI</dt>
+				<dd>
+					<a class="row-link" href={ vm.Runtime.TemporalUILink } target="_blank" rel="noopener noreferrer">{ vm.Runtime.TemporalUILink }</a>
+					<span class="muted"> · override with TEMPORAL_UI_URL</span>
+				</dd>
+			</dl>
+		</section>
+		<section class="card">
+			<h3>Object storage</h3>
+			<p class="muted" style="margin:0 0 0.75rem">Artifact URIs for ingestion use this bucket configuration.</p>
+			<dl class="settings-kv">
+				<dt>Scheme</dt>
+				<dd><code>{ vm.Runtime.ObjectStorage.Scheme }</code></dd>
+				<dt>Endpoint</dt>
+				<dd><code>{ vm.Runtime.ObjectStorage.Endpoint }</code></dd>
+				<dt>Region</dt>
+				<dd><code>{ vm.Runtime.ObjectStorage.Region }</code></dd>
+				<dt>Bucket</dt>
+				<dd><code>{ vm.Runtime.ObjectStorage.Bucket }</code></dd>
+				<dt>Access key</dt>
+				<dd><code>{ vm.Runtime.ObjectStorage.AccessKeyMasked }</code></dd>
+				<dt>Secret key</dt>
+				<dd>
+					if vm.Runtime.ObjectStorage.SecretConfigured {
+						<span class="badge badge-ok">Configured</span>
+						<span class="muted"> · value never shown</span>
+					} else {
+						<span class="muted">Not set</span>
+					}
+				</dd>
+				<dt>Path-style URLs</dt>
+				<dd>
+					if vm.Runtime.ObjectStorage.UsePathStyle {
+						Yes
+					} else {
+						No
+					}
+				</dd>
+			</dl>
+		</section>
+		<section class="card">
+			<h3>OpenTelemetry</h3>
+			<dl class="settings-kv">
+				<dt>OTLP exporter</dt>
+				<dd>{ vm.Runtime.OTELExporter }</dd>
+			</dl>
+		</section>
+		<section class="card">
+			<h3>Webhooks &amp; delivery</h3>
+			<p class="muted" style="margin:0">{ vm.WebhookHint }</p>
+			<ul style="margin:0.75rem 0 0;padding-left:1.2rem;color:var(--text-muted);font-size:0.88rem;line-height:1.6">
+				<li>Subscribe to document lifecycle events (<code>ingestion_run.completed</code>, <code>review.required</code>, …) via webhook-api.</li>
+				<li>Rotate signing secrets out-of-band; never paste secrets into this UI.</li>
+			</ul>
+		</section>
+		<section class="card">
+			<h3>Access model</h3>
+			<div class="flash flash-info" style="margin:0">
+				<strong>MVP.</strong> This surface assumes trusted operators. Production adds Owner / Admin / Reviewer / Viewer roles,
+				tenant isolation, and hiding raw provider payloads from customer tenants — wire auth middleware before exposing externally.
+			</div>
+		</section>
+	</div>
+}

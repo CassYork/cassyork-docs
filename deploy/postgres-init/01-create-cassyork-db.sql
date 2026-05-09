@@ -1,0 +1,3 @@
+CREATE DATABASE cassyork;
+
+GRANT ALL PRIVILEGES ON DATABASE cassyork TO temporal;

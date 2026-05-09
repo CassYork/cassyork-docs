@@ -1,0 +1,182 @@
+package adminui
+
+import "fmt"
+
+templ DashboardPage(vm DashboardVM) {
+	@Shell(NavDashboard, "Dashboard", vm.Scope, dashboardMain(vm))
+}
+
+templ dashboardMain(vm DashboardVM) {
+	<h1 class="page-title">Control plane overview</h1>
+	<p class="page-desc">
+		Are documents flowing? Are outputs reliable? Are models behaving? This dashboard merges recent Postgres activity with slots for accuracy, cost, and latency once analytics are wired.
+	</p>
+	<div class="grid grid-kpi" style="margin-bottom:1rem">
+		<div class="kpi">
+			<div class="kpi-label">Documents (recent sample)</div>
+			<div class="kpi-value">{ fmt.Sprintf("%d", vm.KPI.DocumentsProcessed) }</div>
+			<div class="kpi-sub">Loaded rows for current org/project</div>
+		</div>
+		<div class="kpi">
+			<div class="kpi-label">Straight-through rate</div>
+			<div class="kpi-value">{ fmt.Sprintf("%.1f%%", vm.KPI.StraightThroughPct) }</div>
+			<div class="kpi-sub">Completed ÷ runs in sample</div>
+		</div>
+		<div class="kpi">
+			<div class="kpi-label">Human review rate</div>
+			<div class="kpi-value">{ fmt.Sprintf("%.1f%%", vm.KPI.HumanReviewPct) }</div>
+			<div class="kpi-sub">Requires review ÷ runs</div>
+		</div>
+		<div class="kpi">
+			<div class="kpi-label">Avg ground truth score</div>
+			<div class="kpi-value">—</div>
+			<div class="kpi-sub">Connect evaluation store</div>
+		</div>
+		<div class="kpi">
+			<div class="kpi-label">Schema failure rate</div>
+			<div class="kpi-value">—</div>
+			<div class="kpi-sub">Validation telemetry</div>
+		</div>
+		<div class="kpi">
+			<div class="kpi-label">Avg cost / document</div>
+			<div class="kpi-value">—</div>
+			<div class="kpi-sub">LLM spend aggregation</div>
+		</div>
+		<div class="kpi">
+			<div class="kpi-label">Avg processing time</div>
+			<div class="kpi-value">—</div>
+			<div class="kpi-sub">Trace-derived latency</div>
+		</div>
+	</div>
+	<div class="grid-dash" style="margin-bottom:1rem">
+		<div class="card">
+			<h3>Processing volume</h3>
+			<p class="muted" style="margin:0 0 0.75rem">Time-series chart · Last 24h / 7d / 30d filters ship with analytics backend.</p>
+			<div class="panel-placeholder">
+				Chart placeholder · wire warehouse metrics
+			</div>
+		</div>
+		<div class="card">
+			<h3>Status breakdown</h3>
+			<table class="ops">
+				<tbody>
+					<tr><td>Queued</td><td><strong>{ fmt.Sprintf("%d", vm.StatusCounts.Queued) }</strong></td></tr>
+					<tr><td>Running</td><td><strong>{ fmt.Sprintf("%d", vm.StatusCounts.Running) }</strong></td></tr>
+					<tr><td>Requires review</td><td><strong>{ fmt.Sprintf("%d", vm.StatusCounts.RequiresReview) }</strong></td></tr>
+					<tr><td>Completed</td><td><strong>{ fmt.Sprintf("%d", vm.StatusCounts.Completed) }</strong></td></tr>
+					<tr><td>Failed / cancelled</td><td><strong>{ fmt.Sprintf("%d", vm.StatusCounts.Failed) }</strong></td></tr>
+					<tr><td>Other</td><td><strong>{ fmt.Sprintf("%d", vm.StatusCounts.Other) }</strong></td></tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<div class="grid-dash" style="margin-bottom:1rem">
+		<div class="card">
+			<h3>Field accuracy</h3>
+			<p class="muted" style="margin:0 0 0.75rem">Per-field accuracy, disagreement, review rate — fed by ground truth + extraction logs.</p>
+			<table class="ops">
+				<thead>
+					<tr>
+						<th>Field</th>
+						<th>Accuracy</th>
+						<th>Missing</th>
+						<th>Disagreement</th>
+						<th>Review</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td colspan="5" class="muted">No field-level metrics in this environment yet.</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<div class="card">
+			<h3>Provider / model performance</h3>
+			<p class="muted" style="margin:0 0 0.75rem">Compare providers on accuracy, latency, and cost per document.</p>
+			<table class="ops">
+				<thead>
+					<tr>
+						<th>Provider</th>
+						<th>Model</th>
+						<th>Accuracy</th>
+						<th>Latency</th>
+						<th>Cost</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td colspan="5" class="muted">Connect model routing outcomes + billing.</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<div class="grid-dash">
+		<div class="card">
+			<h3>Recent failures</h3>
+			if len(vm.RecentFailures) == 0 {
+				<p class="muted" style="margin:0">No failed runs in the recent sample.</p>
+			} else {
+				<table class="ops">
+					<thead>
+						<tr>
+							<th>Run</th>
+							<th>Document</th>
+							<th>Error</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, f := range vm.RecentFailures {
+							<tr>
+								<td>
+									<a class="row-link" href={ RunLink(vm.Scope, f.ID) }>{ f.ID }</a>
+								</td>
+								<td>
+									<a class="row-link" href={ DocumentLink(vm.Scope, f.DocumentID) }>{ f.DocumentID }</a>
+								</td>
+								<td class="muted">{ f.ErrorPreview }</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			}
+		</div>
+		<div class="card">
+			<h3>Review queue summary</h3>
+			<p class="muted" style="margin:0 0 0.75rem">Items waiting on humans — priority, SLA, and correction loop.</p>
+			<p class="muted" style="margin:0">
+				<strong>{ fmt.Sprintf("%d", vm.StatusCounts.RequiresReview) }</strong> runs flagged “requires review” in sample.
+				<a class="row-link" href={ vm.Scope.Path("review-queue") } style="margin-left:0.5rem">Open queue →</a>
+			</p>
+		</div>
+	</div>
+	<div class="card" style="margin-top:1rem">
+		<h3>Live samples · Postgres</h3>
+		<p class="muted" style="margin:0 0 0.75rem">Auto-refresh / 10s · same scope</p>
+		<div class="grid-dash">
+			<div>
+				<h3 style="font-size:0.8rem;margin-bottom:0.5rem">Documents</h3>
+				<div
+					id="documents-panel"
+					hx-get={ DocumentsFragmentURL(vm.Scope) }
+					hx-trigger="load delay:80ms, every 10s"
+					hx-swap="innerHTML"
+				>
+					@DocumentsTable(vm.Documents)
+				</div>
+			</div>
+			<div>
+				<h3 style="font-size:0.8rem;margin-bottom:0.5rem">Ingestion runs</h3>
+				<div
+					id="runs-panel"
+					hx-get={ RunsFragmentURL(vm.Scope) }
+					hx-trigger="load delay:80ms, every 10s"
+					hx-swap="innerHTML"
+				>
+					@RunsTable(vm.Runs)
+				</div>
+			</div>
+		</div>
+	</div>
+}

@@ -1,0 +1,59 @@
+package adminui
+
+templ DocumentsPage(vm DocumentsPageVM) {
+	@Shell(NavDocuments, "Documents", vm.Scope, documentsBody(vm))
+}
+
+templ documentsBody(vm DocumentsPageVM) {
+	<h1 class="page-title">Document operations</h1>
+	<p class="page-desc">
+		Scan the fleet: type, latest run, model, confidence, validation, and review state. The table is for triage; the detail view is for decisions.
+	</p>
+	<div class="card" style="margin-bottom:1rem">
+		<h3>Register &amp; queue ingestion</h3>
+		<p class="muted" style="margin:0 0 0.75rem">Same path as the ingestion API — creates document + run + Temporal workflow.</p>
+		<form
+			hx-post={ vm.Scope.Path("ui/actions/ingest") }
+			hx-target="#ingest-flash"
+			hx-swap="innerHTML"
+			class="grid"
+			style="gap:0.75rem"
+		>
+			<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.75rem; align-items:end">
+				<div>
+					<label class="muted" style="font-size:0.72rem;display:block;margin-bottom:0.2rem">Pipeline</label>
+					<input type="text" name="pipeline_id" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px" placeholder="optional"/>
+				</div>
+				<div>
+					<label class="muted" style="font-size:0.72rem;display:block;margin-bottom:0.2rem">Schema</label>
+					<input type="text" name="schema_id" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px" placeholder="optional"/>
+				</div>
+				<div>
+					<label class="muted" style="font-size:0.72rem;display:block;margin-bottom:0.2rem">Model config</label>
+					<input type="text" name="model_config_id" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px" placeholder="optional"/>
+				</div>
+				<div>
+					<label class="muted" style="font-size:0.72rem;display:block;margin-bottom:0.2rem">Prompt version</label>
+					<input type="text" name="prompt_version_id" style="width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px" placeholder="optional"/>
+				</div>
+				<div>
+					<button type="submit" class="btn btn-primary" style="width:100%">Start ingestion</button>
+				</div>
+			</div>
+		</form>
+		<div id="ingest-flash" style="margin-top:0.75rem"></div>
+	</div>
+	<div class="card">
+		<div class="toolbar">
+			<span class="muted">Filters (project, status, model, …) connect to search API next.</span>
+		</div>
+		<div
+			id="ops-documents-panel"
+			hx-get={ OpsDocumentsFragmentURL(vm.Scope) }
+			hx-trigger="load delay:80ms, every 12s"
+			hx-swap="innerHTML"
+		>
+			@OpsDocumentsTable(vm.Scope, vm.Rows)
+		</div>
+	</div>
+}
