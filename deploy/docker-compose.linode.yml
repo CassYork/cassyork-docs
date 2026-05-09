@@ -1,0 +1,83 @@
+# Production-style stack for a single Linode VM (Docker Compose).
+# Run from the repository root:
+#   cp deploy/env.linode.example deploy/.env.linode   # edit secrets
+#   docker compose --env-file deploy/.env.linode -f deploy/docker-compose.linode.yml up -d --build
+#
+# Then run migrations once (see deploy/LINODE.md).
+
+name: cassyork-linode
+
+services:
+  postgresql:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-temporal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: temporal
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-temporal} -d temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    restart: unless-stopped
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-temporal}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: postgresql
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${OBJECT_STORAGE_ACCESS_KEY_ID:-minio}
+      MINIO_ROOT_PASSWORD: ${OBJECT_STORAGE_SECRET_ACCESS_KEY:?set OBJECT_STORAGE_SECRET_ACCESS_KEY}
+    volumes:
+      - minio-data:/data
+
+  admin-ui:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.admin-ui
+    restart: unless-stopped
+    ports:
+      - "${ADMIN_UI_PUBLISH:-8095}:8095"
+    environment:
+      LISTEN_ADDR: ${LISTEN_ADDR:-:8095}
+      DATABASE_URL: postgres://${POSTGRES_USER:-temporal}:${POSTGRES_PASSWORD}@postgresql:5432/cassyork?sslmode=disable
+      TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal:7233}
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OBJECT_STORAGE_SCHEME: ${OBJECT_STORAGE_SCHEME:-s3}
+      OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:-http://minio:9000}
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-us-east-1}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-cassyork-documents}
+      OBJECT_STORAGE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY_ID:-minio}
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_ACCESS_KEY}
+      OBJECT_STORAGE_USE_PATH_STYLE: ${OBJECT_STORAGE_USE_PATH_STYLE:-true}
+      ADMIN_UI_LIST_LIMIT: ${ADMIN_UI_LIST_LIMIT:-}
+      TEMPORAL_UI_URL: ${TEMPORAL_UI_URL:-}
+      WEBHOOK_API_PUBLIC_URL: ${WEBHOOK_API_PUBLIC_URL:-}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      minio:
+        condition: service_started
+
+volumes:
+  pgdata:
+  minio-data:

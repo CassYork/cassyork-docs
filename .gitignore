@@ -12,3 +12,6 @@ venv/
 .vscode/
 /tmp/
 *.sqlite3
+
+# Linode deploy helper (non-secret IP / overrides)
+deploy/linode-connection.env

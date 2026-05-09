@@ -1,0 +1,13 @@
+.git
+.idea
+.vscode
+tmp/
+*.md
+!deploy/**/*.md
+python/.venv
+python/__pycache__
+**/__pycache__
+*.py[cod]
+.env
+.env.*
+node_modules

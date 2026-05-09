@@ -1,0 +1,71 @@
+name: Deploy main
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-linode-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_REMOTE_DIR: ${{ secrets.DEPLOY_REMOTE_DIR }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "${DEPLOY_SSH_PRIVATE_KEY:-}" ] || [ -z "${DEPLOY_HOST:-}" ]; then
+            echo "Missing secrets: DEPLOY_SSH_PRIVATE_KEY and DEPLOY_HOST are required." >&2
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Rsync repository (preserves server deploy/.env.linode)
+        run: |
+          USER="${DEPLOY_USER:-root}"
+          DIR="${DEPLOY_REMOTE_DIR:-/opt/cassyork-docs}"
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
+            --exclude '.git' \
+            --exclude '.venv' \
+            --exclude 'venv' \
+            --exclude '__pycache__' \
+            --exclude 'bin' \
+            --exclude 'dist' \
+            --exclude '*.sqlite3' \
+            --exclude '.env' \
+            --exclude 'deploy/.env.linode' \
+            ./ "${USER}@${DEPLOY_HOST}:${DIR}/"
+
+      - name: Docker Compose up + Goose migrations
+        run: |
+          USER="${DEPLOY_USER:-root}"
+          DIR="${DEPLOY_REMOTE_DIR:-/opt/cassyork-docs}"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new \
+            "${USER}@${DEPLOY_HOST}" \
+            "set -euo pipefail
+             cd '${DIR}'
+             docker compose --env-file deploy/.env.linode -f deploy/docker-compose.linode.yml up -d --build
+             bash deploy/scripts/run-migrations-remote.sh"
+
+      - name: Health check
+        run: |
+          curl -sfS --retry 5 --retry-delay 5 --retry-all-errors --max-time 60 \
+            "http://${DEPLOY_HOST}:8095/healthz"
+          echo
