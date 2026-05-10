@@ -1,8 +1,12 @@
 package adminui
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -15,16 +19,21 @@ import (
 
 	"cassyork.dev/platform/internal/application/commands"
 	"cassyork.dev/platform/internal/config"
+	"cassyork.dev/platform/internal/infrastructure/blob"
 	"cassyork.dev/platform/internal/infrastructure/postgres/sqlcgen"
 )
 
 const defaultListLimit = 64
+
+// maxUploadBytes caps multipart uploads on the ingest action (single document).
+const maxUploadBytes = 50 << 20 // 50 MiB
 
 // Server serves HTML admin routes backed by Postgres + ingestion commands.
 type Server struct {
 	Q       *sqlcgen.Queries
 	Ingest  commands.StartDocumentIngestionHandler
 	Config  config.Settings
+	Blob    *blob.Client
 	Logger  *slog.Logger
 	ListLim int32
 }
@@ -348,9 +357,17 @@ func (s *Server) FragmentRuns(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) ActionIngest(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad form", http.StatusBadRequest)
-		return
+	ct := r.Header.Get("Content-Type")
+	if strings.HasPrefix(ct, "multipart/form-data") {
+		if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
+			http.Error(w, "bad multipart form", http.StatusBadRequest)
+			return
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad form", http.StatusBadRequest)
+			return
+		}
 	}
 	scope := s.scopeFromRequest(r)
 
@@ -358,14 +375,80 @@ func (s *Server) ActionIngest(w http.ResponseWriter, r *http.Request) {
 	docID := "doc_" + uuid.NewString()
 	runID := "run_" + uuid.NewString()
 
+	file, fh, errFile := r.FormFile("file")
+	if errFile != nil && !errors.Is(errFile, http.ErrMissingFile) {
+		s.Logger.Error("ingest form file", "err", errFile)
+		s.render(w, r, IngestResultFragment(false, "Could not read file field.", "", "", false))
+		return
+	}
+	hasFile := fh != nil && fh.Filename != ""
+	if hasFile {
+		defer file.Close()
+	}
+
+	fileStored := false
+	storageURI := s.Config.ObjectStorage.ArtifactURI("pending", docID)
+	mimeType := "application/octet-stream"
+	checksum := ""
+
+	if hasFile {
+		if s.Blob == nil {
+			s.render(w, r, IngestResultFragment(false, "File upload requires a working object storage client (check OBJECT_STORAGE_*).", "", "", false))
+			return
+		}
+		if fh.Size > maxUploadBytes {
+			s.render(w, r, IngestResultFragment(false, "File exceeds maximum upload size (50 MiB).", "", "", false))
+			return
+		}
+
+		safeName := blob.SanitizeUploadFilename(fh.Filename)
+		objectKey := s.Config.ObjectStorage.ObjectKey("pending", docID, safeName)
+		storageURI = s.Config.ObjectStorage.ArtifactURI("pending", docID, safeName)
+
+		peek := make([]byte, 512)
+		n, err := io.ReadFull(file, peek)
+		switch err {
+		case nil, io.EOF, io.ErrUnexpectedEOF:
+		default:
+			s.Logger.Error("ingest read upload", "err", err)
+			s.render(w, r, IngestResultFragment(false, "Could not read uploaded file.", "", "", false))
+			return
+		}
+		peek = peek[:n]
+
+		body := io.MultiReader(bytes.NewReader(peek), file)
+		detected := http.DetectContentType(peek)
+		mimeType = detected
+		if t := fh.Header.Get("Content-Type"); t != "" && !strings.EqualFold(t, "application/octet-stream") {
+			mimeType = t
+		}
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+
+		h := sha256.New()
+		tee := io.TeeReader(body, h)
+		putSize := fh.Size
+		if putSize < 0 {
+			putSize = -1
+		}
+		if err := s.Blob.Put(r.Context(), objectKey, tee, putSize, mimeType); err != nil {
+			s.Logger.Error("ingest blob put", "err", err)
+			s.render(w, r, IngestResultFragment(false, "Could not store file in object storage.", "", "", false))
+			return
+		}
+		checksum = hex.EncodeToString(h.Sum(nil))
+		fileStored = true
+	}
+
 	res, err := s.Ingest.Handle(r.Context(), commands.StartDocumentIngestionCommand{
 		OrganizationID:  scope.OrganizationID,
 		ProjectID:       scope.ProjectID,
 		DocumentID:      docID,
 		IngestionRunID:  runID,
-		StorageURI:      s.Config.ObjectStorage.ArtifactURI("pending", docID),
-		MimeType:        "application/octet-stream",
-		ChecksumSHA256:  "",
+		StorageURI:      storageURI,
+		MimeType:        mimeType,
+		ChecksumSHA256:  checksum,
 		PipelineID:      r.FormValue("pipeline_id"),
 		SchemaID:        r.FormValue("schema_id"),
 		ModelConfigID:   r.FormValue("model_config_id"),
@@ -375,10 +458,10 @@ func (s *Server) ActionIngest(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		s.Logger.Error("ingest", "err", err)
-		s.render(w, r, IngestResultFragment(false, err.Error(), "", ""))
+		s.render(w, r, IngestResultFragment(false, err.Error(), "", "", false))
 		return
 	}
-	s.render(w, r, IngestResultFragment(true, "", res.DocumentID, res.IngestionRunID))
+	s.render(w, r, IngestResultFragment(true, "", res.DocumentID, res.IngestionRunID, fileStored))
 }
 
 func (s *Server) render(w http.ResponseWriter, r *http.Request, c templ.Component) {

@@ -111,9 +111,12 @@ templ RunsTable(rows []RunSummary) {
 	}
 }
 
-templ IngestResultFragment(ok bool, errMsg string, docID string, runID string) {
+templ IngestResultFragment(ok bool, errMsg string, docID string, runID string, fileStored bool) {
 	if ok {
 		<div style="color:#15803d;font-size:0.875rem">
+			if fileStored {
+				<span>Stored in object storage · </span>
+			}
 			Queued ingestion · doc <code>{ docID }</code> · run <code>{ runID }</code>. Tables refresh automatically.
 		</div>
 	} else {

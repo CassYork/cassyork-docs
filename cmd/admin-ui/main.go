@@ -12,6 +12,7 @@ import (
 	"cassyork.dev/platform/internal/application/commands"
 	"cassyork.dev/platform/internal/config"
 	"cassyork.dev/platform/internal/httphelp"
+	"cassyork.dev/platform/internal/infrastructure/blob"
 	"cassyork.dev/platform/internal/infrastructure/postgres"
 	"cassyork.dev/platform/internal/infrastructure/temporaladapter"
 	"cassyork.dev/platform/internal/observability"
@@ -61,6 +62,11 @@ func main() {
 		Config:  cfg,
 		Logger:  logger,
 		ListLim: adminui.ParseListLimit(os.Getenv("ADMIN_UI_LIST_LIMIT")),
+	}
+	if bc, err := blob.New(cfg.ObjectStorage); err != nil {
+		logger.Warn("object storage uploads disabled", "err", err)
+	} else {
+		srv.Blob = bc
 	}
 
 	mux := httphelp.NewMux()

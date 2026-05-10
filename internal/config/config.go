@@ -67,12 +67,8 @@ func Load() Settings {
 	}
 }
 
-// ArtifactURI builds a logical URI for an object key under the configured bucket (scheme://bucket/path).
-func (o ObjectStorage) ArtifactURI(elem ...string) string {
-	scheme := o.Scheme
-	if scheme == "" {
-		scheme = "s3"
-	}
+// ObjectKey joins path segments into an object key inside the bucket (no scheme or bucket prefix).
+func (o ObjectStorage) ObjectKey(elem ...string) string {
 	parts := make([]string, 0, len(elem))
 	for _, e := range elem {
 		e = strings.Trim(e, "/")
@@ -80,7 +76,16 @@ func (o ObjectStorage) ArtifactURI(elem ...string) string {
 			parts = append(parts, e)
 		}
 	}
-	key := strings.Join(parts, "/")
+	return strings.Join(parts, "/")
+}
+
+// ArtifactURI builds a logical URI for an object key under the configured bucket (scheme://bucket/path).
+func (o ObjectStorage) ArtifactURI(elem ...string) string {
+	scheme := o.Scheme
+	if scheme == "" {
+		scheme = "s3"
+	}
+	key := o.ObjectKey(elem...)
 	return fmt.Sprintf("%s://%s/%s", scheme, o.Bucket, key)
 }
 

@@ -58,27 +58,27 @@ func documentsBody(vm DocumentsPageVM) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h1 class=\"page-title\">Document operations</h1><p class=\"page-desc\">Scan the fleet: type, latest run, model, confidence, validation, and review state. The table is for triage; the detail view is for decisions.</p><div class=\"card\" style=\"margin-bottom:1rem\"><h3>Register &amp; queue ingestion</h3><p class=\"muted\" style=\"margin:0 0 0.75rem\">Same path as the ingestion API — creates document + run + Temporal workflow.</p><form hx-post=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h1 class=\"page-title\">Document operations</h1><p class=\"page-desc\">Scan the fleet: type, latest run, model, confidence, validation, and review state. The table is for triage; the detail view is for decisions.</p><div class=\"card\" style=\"margin-bottom:1rem\"><h3>Upload &amp; queue ingestion</h3><p class=\"muted\" style=\"margin:0 0 0.75rem\">Optional file (≤ 50 MiB): stored under <code class=\"muted\">pending/&lt;doc_id&gt;/…</code> in your configured bucket, then document + run + Temporal workflow (same as the ingestion API). Leave empty to register metadata only.</p><form hx-post=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(vm.Scope.Path("ui/actions/ingest"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adminui/documents.templ`, Line: 16, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adminui/documents.templ`, Line: 18, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" hx-target=\"#ingest-flash\" hx-swap=\"innerHTML\" class=\"grid\" style=\"gap:0.75rem\"><div class=\"grid\" style=\"grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.75rem; align-items:end\"><div><label class=\"muted\" style=\"font-size:0.72rem;display:block;margin-bottom:0.2rem\">Pipeline</label> <input type=\"text\" name=\"pipeline_id\" style=\"width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px\" placeholder=\"optional\"></div><div><label class=\"muted\" style=\"font-size:0.72rem;display:block;margin-bottom:0.2rem\">Schema</label> <input type=\"text\" name=\"schema_id\" style=\"width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px\" placeholder=\"optional\"></div><div><label class=\"muted\" style=\"font-size:0.72rem;display:block;margin-bottom:0.2rem\">Model config</label> <input type=\"text\" name=\"model_config_id\" style=\"width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px\" placeholder=\"optional\"></div><div><label class=\"muted\" style=\"font-size:0.72rem;display:block;margin-bottom:0.2rem\">Prompt version</label> <input type=\"text\" name=\"prompt_version_id\" style=\"width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px\" placeholder=\"optional\"></div><div><button type=\"submit\" class=\"btn btn-primary\" style=\"width:100%\">Start ingestion</button></div></div></form><div id=\"ingest-flash\" style=\"margin-top:0.75rem\"></div></div><div class=\"card\"><div class=\"toolbar\"><span class=\"muted\">Filters (project, status, model, …) connect to search API next.</span></div><div id=\"ops-documents-panel\" hx-get=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" hx-encoding=\"multipart/form-data\" hx-target=\"#ingest-flash\" hx-swap=\"innerHTML\" class=\"grid\" style=\"gap:0.75rem\"><div><label class=\"muted\" style=\"font-size:0.72rem;display:block;margin-bottom:0.2rem\">Document file</label> <input type=\"file\" name=\"file\" style=\"width:100%;padding:0.35rem;border:1px solid var(--border);border-radius:6px;background:var(--surface-muted)\"></div><div class=\"grid\" style=\"grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.75rem; align-items:end\"><div><label class=\"muted\" style=\"font-size:0.72rem;display:block;margin-bottom:0.2rem\">Pipeline</label> <input type=\"text\" name=\"pipeline_id\" style=\"width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px\" placeholder=\"optional\"></div><div><label class=\"muted\" style=\"font-size:0.72rem;display:block;margin-bottom:0.2rem\">Schema</label> <input type=\"text\" name=\"schema_id\" style=\"width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px\" placeholder=\"optional\"></div><div><label class=\"muted\" style=\"font-size:0.72rem;display:block;margin-bottom:0.2rem\">Model config</label> <input type=\"text\" name=\"model_config_id\" style=\"width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px\" placeholder=\"optional\"></div><div><label class=\"muted\" style=\"font-size:0.72rem;display:block;margin-bottom:0.2rem\">Prompt version</label> <input type=\"text\" name=\"prompt_version_id\" style=\"width:100%;padding:0.4rem;border:1px solid var(--border);border-radius:6px\" placeholder=\"optional\"></div><div><button type=\"submit\" class=\"btn btn-primary\" style=\"width:100%\">Upload / start ingestion</button></div></div></form><div id=\"ingest-flash\" style=\"margin-top:0.75rem\"></div></div><div class=\"card\"><div class=\"toolbar\"><span class=\"muted\">Filters (project, status, model, …) connect to search API next.</span></div><div id=\"ops-documents-panel\" hx-get=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(OpsDocumentsFragmentURL(vm.Scope))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adminui/documents.templ`, Line: 52, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/adminui/documents.templ`, Line: 59, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
