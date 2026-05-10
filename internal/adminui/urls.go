@@ -32,6 +32,11 @@ func DocumentLink(scope OrgScope, documentID string) string {
 	return scope.Path("documents/" + escSeg(documentID))
 }
 
+// ArtifactLink serves GET → redirect to a presigned object URL for viewing or download.
+func ArtifactLink(scope OrgScope, documentID string) string {
+	return scope.Path("documents/" + escSeg(documentID) + "/artifact")
+}
+
 // RunLink is the detail URL for an ingestion run within the scope.
 func RunLink(scope OrgScope, runID string) string {
 	return scope.Path("runs/" + escSeg(runID))
@@ -82,6 +87,19 @@ func LegacyDocumentRedirect() http.HandlerFunc {
 		}
 		sc := ScopeFromQuery(r, DemoScope)
 		http.Redirect(w, r, DocumentLink(sc, docID), http.StatusPermanentRedirect)
+	}
+}
+
+// LegacyArtifactRedirect maps GET /documents/{docId}/artifact to the scoped artifact redirect route.
+func LegacyArtifactRedirect() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		docID := strings.TrimSpace(r.PathValue("docId"))
+		if docID == "" {
+			http.NotFound(w, r)
+			return
+		}
+		sc := ScopeFromQuery(r, DemoScope)
+		http.Redirect(w, r, ArtifactLink(sc, docID), http.StatusPermanentRedirect)
 	}
 }
 

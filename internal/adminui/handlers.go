@@ -28,6 +28,8 @@ const defaultListLimit = 64
 // maxUploadBytes caps multipart uploads on the ingest action (single document).
 const maxUploadBytes = 50 << 20 // 50 MiB
 
+const artifactPresignTTL = 15 * time.Minute
+
 // Server serves HTML admin routes backed by Postgres + ingestion commands.
 type Server struct {
 	Q       *sqlcgen.Queries
@@ -164,6 +166,10 @@ func (s *Server) DocumentDetail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "lookup failed", http.StatusInternalServerError)
 		return
 	}
+	if row.OrganizationID != scope.OrganizationID || row.ProjectID != scope.ProjectID {
+		http.NotFound(w, r)
+		return
+	}
 	runs, err := s.Q.ListIngestionRunsForDocument(r.Context(), sqlcgen.ListIngestionRunsForDocumentParams{
 		DocumentID: docID,
 		Limit:      s.listLimit(),
@@ -191,7 +197,58 @@ func (s *Server) DocumentDetail(w http.ResponseWriter, r *http.Request) {
 		LatestRun:       latest,
 		RunHistory:      history,
 	}
+	if s.Blob != nil {
+		key, err := blob.ValidateArtifactURI(s.Config.ObjectStorage, row.StorageUri)
+		if err == nil && !blob.IsPlaceholderPendingKey(key) {
+			vm.ArtifactURL = ArtifactLink(scope, docID)
+			vm.ArtifactViewer = ArtifactViewerKind(row.MimeType)
+		}
+	}
 	s.render(w, r, DocumentDetailPage(vm))
+}
+
+func (s *Server) DocumentArtifact(w http.ResponseWriter, r *http.Request) {
+	scope := s.scopeFromRequest(r)
+	docID := r.PathValue("docId")
+	if docID == "" {
+		http.NotFound(w, r)
+		return
+	}
+	row, err := s.Q.GetDocumentByID(r.Context(), docID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.NotFound(w, r)
+			return
+		}
+		s.Logger.Error("artifact document", "err", err)
+		http.Error(w, "lookup failed", http.StatusInternalServerError)
+		return
+	}
+	if row.OrganizationID != scope.OrganizationID || row.ProjectID != scope.ProjectID {
+		http.NotFound(w, r)
+		return
+	}
+	if s.Blob == nil {
+		http.Error(w, "object storage not configured", http.StatusServiceUnavailable)
+		return
+	}
+	key, err := blob.ValidateArtifactURI(s.Config.ObjectStorage, row.StorageUri)
+	if err != nil {
+		s.Logger.Warn("artifact uri", "err", err)
+		http.Error(w, "invalid artifact reference", http.StatusBadRequest)
+		return
+	}
+	if blob.IsPlaceholderPendingKey(key) {
+		http.Error(w, "no file uploaded for this document", http.StatusNotFound)
+		return
+	}
+	url, err := s.Blob.PresignGetURL(r.Context(), key, artifactPresignTTL)
+	if err != nil {
+		s.Logger.Error("artifact presign", "err", err)
+		http.Error(w, "could not generate download URL", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, url, http.StatusFound)
 }
 
 func (s *Server) RunDetail(w http.ResponseWriter, r *http.Request) {
@@ -209,6 +266,10 @@ func (s *Server) RunDetail(w http.ResponseWriter, r *http.Request) {
 		}
 		s.Logger.Error("get run", "err", err)
 		http.Error(w, "lookup failed", http.StatusInternalServerError)
+		return
+	}
+	if runRow.OrganizationID != scope.OrganizationID || runRow.ProjectID != scope.ProjectID {
+		http.NotFound(w, r)
 		return
 	}
 	docRow, err := s.Q.GetDocumentByID(r.Context(), runRow.DocumentID)

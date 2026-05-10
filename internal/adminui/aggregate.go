@@ -205,6 +205,19 @@ func runSummaryFromRow(r sqlcgen.IngestionRun) RunSummary {
 	}
 }
 
+// ArtifactViewerKind selects how to embed the artifact in the document detail page.
+func ArtifactViewerKind(mime string) string {
+	m := strings.ToLower(strings.TrimSpace(mime))
+	switch {
+	case strings.Contains(m, "pdf"):
+		return "pdf"
+	case strings.HasPrefix(m, "image/"):
+		return "image"
+	default:
+		return "download"
+	}
+}
+
 func pathLastSegment(uri string) string {
 	if uri == "" {
 		return ""

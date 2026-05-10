@@ -88,11 +88,13 @@ type OpsDocumentRow struct {
 
 // DocumentDetailVM is the split-pane document workspace (viewer + extraction).
 type DocumentDetailVM struct {
-	Scope           OrgScope
-	Document        DocumentSummary
-	FullArtifactURI string
-	LatestRun       *RunSummary
-	RunHistory      []RunSummary
+	Scope            OrgScope
+	Document         DocumentSummary
+	FullArtifactURI  string
+	LatestRun        *RunSummary
+	RunHistory       []RunSummary
+	ArtifactURL      string // scoped GET path → redirect to presigned URL; empty if no blob / placeholder key
+	ArtifactViewer   string // "", "pdf", "image", "download" — layout for viewer chrome
 }
 
 // RunDetailVM is technical run inspection (timeline + summary).

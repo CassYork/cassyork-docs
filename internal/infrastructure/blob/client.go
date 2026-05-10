@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -72,4 +73,21 @@ func (c *Client) Put(ctx context.Context, key string, body io.Reader, size int64
 		return fmt.Errorf("blob: PutObject %s: %w", key, err)
 	}
 	return nil
+}
+
+// PresignGetURL returns a time-limited HTTPS URL to GET an object (for viewing / download in the browser).
+func (c *Client) PresignGetURL(ctx context.Context, key string, ttl time.Duration) (string, error) {
+	key = strings.Trim(key, "/")
+	if key == "" {
+		return "", fmt.Errorf("blob: empty object key")
+	}
+	pc := s3.NewPresignClient(c.api)
+	out, err := pc.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(ttl))
+	if err != nil {
+		return "", fmt.Errorf("blob: PresignGetObject: %w", err)
+	}
+	return out.URL, nil
 }

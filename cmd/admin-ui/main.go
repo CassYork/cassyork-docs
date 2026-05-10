@@ -76,6 +76,7 @@ func main() {
 
 	scoped := "/orgs/{orgId}/projects/{projectId}"
 	mux.HandleFunc("GET "+scoped+"/dashboard", srv.Dashboard)
+	mux.HandleFunc("GET "+scoped+"/documents/{docId}/artifact", srv.DocumentArtifact)
 	mux.HandleFunc("GET "+scoped+"/documents/{docId}", srv.DocumentDetail)
 	mux.HandleFunc("GET "+scoped+"/documents", srv.DocumentsList)
 	mux.HandleFunc("GET "+scoped+"/runs/{runId}", srv.RunDetail)
@@ -96,6 +97,7 @@ func main() {
 	mux.HandleFunc("GET /", srv.HomeRedirect)
 
 	mux.HandleFunc("GET /dashboard", adminui.LegacyRedirect("dashboard"))
+	mux.HandleFunc("GET /documents/{docId}/artifact", adminui.LegacyArtifactRedirect())
 	mux.HandleFunc("GET /documents/{docId}", adminui.LegacyDocumentRedirect())
 	mux.HandleFunc("GET /documents", adminui.LegacyRedirect("documents"))
 	mux.HandleFunc("GET /runs/{runId}", adminui.LegacyRunRedirect())

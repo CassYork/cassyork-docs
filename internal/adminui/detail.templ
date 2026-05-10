@@ -23,10 +23,38 @@ templ documentDetailBody(vm DocumentDetailVM) {
 	<div class="split">
 		<div class="card" style="margin:0">
 			<h3>Document viewer</h3>
-			<p class="muted" style="margin:0 0 0.75rem">PDF/image viewer, thumbnails, zoom · connects to signed artifact URLs.</p>
-			<div class="panel-placeholder">
-				Viewer shell · artifact <code>{ vm.FullArtifactURI }</code>
-			</div>
+			if vm.ArtifactURL != "" {
+				<p class="muted" style="margin:0 0 0.75rem">
+					Served via a short-lived signed GET URL from your object storage bucket (expires in ~15 minutes).
+				</p>
+				if vm.ArtifactViewer == "pdf" {
+					<iframe src={ vm.ArtifactURL } title="Document PDF" style="width:100%;min-height:70vh;border:1px solid var(--border);border-radius:8px;background:var(--surface-muted)"></iframe>
+					<p style="margin:0.75rem 0 0;font-size:0.88rem">
+						<a class="row-link" href={ vm.ArtifactURL } target="_blank" rel="noopener noreferrer">Open in new tab</a>
+						<span class="muted"> · </span>
+						<code class="muted" style="font-size:0.78rem">{ vm.FullArtifactURI }</code>
+					</p>
+				} else if vm.ArtifactViewer == "image" {
+					<img src={ vm.ArtifactURL } alt="Uploaded document" style="max-width:100%;height:auto;border-radius:8px;border:1px solid var(--border);display:block"/>
+					<p style="margin:0.75rem 0 0;font-size:0.88rem">
+						<a class="row-link" href={ vm.ArtifactURL } target="_blank" rel="noopener noreferrer">Open original</a>
+						<span class="muted"> · </span>
+						<code class="muted" style="font-size:0.78rem">{ vm.FullArtifactURI }</code>
+					</p>
+				} else {
+					<p style="margin:0 0 0.75rem">
+						<a class="btn btn-primary" href={ vm.ArtifactURL } target="_blank" rel="noopener noreferrer">Open / download file</a>
+					</p>
+					<p class="muted" style="margin:0;font-size:0.82rem"><code>{ vm.FullArtifactURI }</code></p>
+				}
+			} else {
+				<p class="muted" style="margin:0 0 0.75rem">
+					Upload a file when you start ingestion to store bytes in object storage. Metadata-only rows only reference <code>pending/&lt;doc_id&gt;</code>.
+				</p>
+				<div class="panel-placeholder">
+					No artifact to preview · <code>{ vm.FullArtifactURI }</code>
+				</div>
+			}
 		</div>
 		<div class="card" style="margin:0">
 			<h3>Extracted fields</h3>
